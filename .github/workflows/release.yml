@@ -33,18 +33,33 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-latest, windows-latest]
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04-arm
+          - macos-13
+          - macos-latest
+          - windows-latest
         include:
           - os: ubuntu-22.04
-            asset_name_suffix: linux-amd64
+            arch: linux-amd64
             pyinstaller_options: ""
             icon_ext: "png"
-          - os: macos-latest
-            asset_name_suffix: macos-amd64
+          - os: ubuntu-24.04-arm
+            arch: linux-arm64
+            pyinstaller_options: ""
+            icon_ext: "png"
+            is_arm: true
+          - os: macos-13
+            arch: macos-amd64
             pyinstaller_options: "--windowed"
             icon_ext: "icns"
+          - os: macos-latest
+            arch: macos-arm64
+            pyinstaller_options: "--windowed"
+            icon_ext: "icns"
+            is_arm: true
           - os: windows-latest
-            asset_name_suffix: windows-amd64
+            arch: windows-amd64
             pyinstaller_options: "--noconsole"
             icon_ext: "ico"
 
@@ -77,7 +92,7 @@ jobs:
         pip install pyinstaller Pillow
 
     - name: Install Linux Dependencies
-      if: matrix.os == 'ubuntu-22.04'
+      if: startsWith(matrix.os, 'ubuntu-')
       run: |
         sudo apt-get update
         sudo apt-get install -y libnss3 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrender1 libxtst6 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xinerama0 libxcb1 libxkbcommon-x11-0 libxkbcommon0
@@ -85,14 +100,14 @@ jobs:
     # --- 步骤：自动处理图标 (macOS转icns, Linux转png) ---
     - name: Prepare Platform Icon
       run: |
-        if [ "${{ matrix.os }}" == "macos-latest" ]; then
+        if [ "${{ matrix.os }}" == "macos-latest" ] || [ "${{ matrix.os }}" == "macos-13" ]; then
           echo "Converting ICO to ICNS for macOS..."
           sips -s format png bilibili.ico --out temp_icon.png
           mkdir bilibili.iconset
           sips -z 1024 1024 temp_icon.png --out bilibili.iconset/icon_512x512@2x.png
           iconutil -c icns bilibili.iconset
           rm -rf bilibili.iconset temp_icon.png
-        elif [ "${{ matrix.os }}" == "ubuntu-22.04" ]; then
+        elif [ "${{ startsWith(matrix.os, 'ubuntu-') }}" == "true" ]; then
           echo "Converting ICO to PNG for Linux..."
           python -c "from PIL import Image; Image.open('bilibili.ico').save('bilibili.png')"
         fi
@@ -165,13 +180,13 @@ jobs:
             pyinstaller main.py \
           --name BiliLiveTool \
           --onefile \
-          --add-data "frontend/dist:frontend/dist" \
+          --add-data "frontend/dist;frontend/dist" \
           --add-data "bilibili.ico;." \
           --add-data "VERSION;." \
           --icon "$ICON_NAME" \
           $EXTRA_ARGS \
           ${{ matrix.pyinstaller_options }}
-        elif [ "${{ matrix.os }}" == "ubuntu-22.04" ]; then
+        elif [ "${{ startsWith(matrix.os, 'ubuntu-') }}" == "true" ]; then
            pyinstaller main.py --name BiliLiveTool --onefile \
             --add-data "frontend/dist:frontend/dist" \
             --add-data "bilibili.ico:." \
@@ -181,7 +196,7 @@ jobs:
             --hidden-import qtpy \
             --hidden-import PyQt5 \
             --hidden-import webview.platforms.qt
-        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+        elif [ "${{ startsWith(matrix.os, 'macos-') }}" == "true" ]; then
             pyinstaller main.py \
               --name BiliLiveTool \
               --onefile \
@@ -201,15 +216,15 @@ jobs:
         VERSION="${{ github.ref_name }}"
         if [ "${{ matrix.os }}" == "windows-latest" ]; then
           EXE_NAME="BiliLiveTool.exe"
-          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.asset_name_suffix }}.zip"
+          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.zip"
           mv dist/$EXE_NAME .
           7z a $ASSET_NAME $EXE_NAME
-        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+        elif [ "${{ startsWith(matrix.os, 'macos') }}" == "true" ]; then
           APP_NAME="BiliLiveTool.app"
-          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.asset_name_suffix }}.zip"
+          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.zip"
           7z a -r $ASSET_NAME dist/$APP_NAME
         else # Linux
-          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.asset_name_suffix }}.tar.gz"
+          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.tar.gz"
           tar -czvf $ASSET_NAME -C dist BiliLiveTool
         fi
         echo "ASSET_NAME=${ASSET_NAME}" >> $GITHUB_ENV
@@ -218,7 +233,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: BiliLiveTool-${{ github.ref_name }}-${{ matrix.asset_name_suffix }}
+        name: BiliLiveTool-${{ github.ref_name }}-${{ matrix.arch }}
         path: ${{ env.ASSET_NAME }}
 
   create-release:
@@ -328,9 +343,11 @@ jobs:
           
           ### 📦 下载地址
           请根据您的系统选择对应的版本进行下载：
-          - **Windows**: 下载 `.zip` 解压即用
-          - **macOS**: 下载 `.zip` 解压运行
-          - **Linux**: 下载 `.tar.gz` 解压使用
+          - **Windows (amd64)**: `windows-amd64.zip`
+          - **macOS (Intel)**: `macos-amd64.zip`
+          - **macOS (Apple Silicon)**: `macos-arm64.zip`
+          - **Linux (amd64)**: `linux-amd64.tar.gz`
+          - **Linux (ARM64)**: `linux-arm64.tar.gz`
 
           ### 🛡️ Windows 用户安全提示
           如果您在 Windows 上运行遇到 **"Windows 已保护你的电脑"** (SmartScreen) 蓝框提示：
