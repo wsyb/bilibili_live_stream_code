@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=B站直播工具
+Comment=Bilibili 直播弹幕管理与推流工具
+Exec=bilibili-live
+Icon=bilibili-live
+Terminal=false
+Type=Application
+Categories=Utility;Network;
+StartupNotify=true

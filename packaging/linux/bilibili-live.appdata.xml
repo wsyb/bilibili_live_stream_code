@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.wsyb.bilibili-live</id>
+  <name>B站直播工具</name>
+  <summary>Bilibili 直播弹幕管理与推流工具</summary>
+  <description>
+    <p>B站直播工具是一款用于管理 Bilibili 直播的开源桌面应用。</p>
+    <ul>
+      <li>自动获取推流码，配合 OBS 等软件推流</li>
+      <li>弹幕监控：实时查看弹幕、进场、礼物消息</li>
+      <li>支持发送弹幕</li>
+      <li>自动跟随系统暗色模式</li>
+    </ul>
+  </description>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <url type="homepage">https://github.com/wsyb/bilibili_live_stream_code</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/wsyb/bilibili_live_stream_code/master/screenshot.png</image>
+    </screenshot>
+  </screenshots>
+</component>

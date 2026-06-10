@@ -28,7 +28,7 @@ jobs:
       shell: bash
 
   build:
-    name: Build on ${{ matrix.os }}
+    name: Build ${{ matrix.arch }}
     needs: update-version
     runs-on: ${{ matrix.os }}
     strategy:
@@ -91,13 +91,36 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller Pillow
 
+    # =============================================
+    # Linux 系统依赖
+    # =============================================
     - name: Install Linux Dependencies
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
         sudo apt-get update
         sudo apt-get install -y libnss3 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrender1 libxtst6 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xinerama0 libxcb1 libxkbcommon-x11-0 libxkbcommon0
 
-    # --- 步骤：自动处理图标 (macOS转icns, Linux转png) ---
+    - name: Install Linux Packaging Tools (AppImage + deb)
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: |
+        sudo apt-get install -y desktop-file-utils
+        # 下载 appimagetool
+        wget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$(uname -m).AppImage" -O /tmp/appimagetool
+        chmod +x /tmp/appimagetool
+
+    # =============================================
+    # Windows 额外工具（Inno Setup）
+    # =============================================
+    - name: Install Inno Setup (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install innosetup --no-progress -y
+        echo "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe" >> $env:GITHUB_ENV
+      shell: pwsh
+
+    # =============================================
+    # 准备图标
+    # =============================================
     - name: Prepare Platform Icon
       run: |
         if [ "${{ matrix.os }}" == "macos-latest" ] || [ "${{ matrix.os }}" == "macos-13" ]; then
@@ -113,22 +136,23 @@ jobs:
         fi
       shell: bash
 
-
-    # --- 步骤：(核心) 动态生成 Windows 版本信息 file ---
+    # =============================================
+    # Windows 版本信息
+    # =============================================
     - name: Generate Windows Version Info
       if: matrix.os == 'windows-latest'
       run: |
         cat <<EOF > generate_version.py
         import sys
-        
+
         tag = "${{ github.ref_name }}"
-        clean_ver = tag.lstrip('v') 
-        
+        clean_ver = tag.lstrip('v')
+
         parts = clean_ver.split('.')
         while len(parts) < 4: parts.append('0')
         ver_tuple = tuple(map(int, parts[:4]))
         ver_str = clean_ver
-        
+
         content = f"""
         # UTF-8
         VSVersionInfo(
@@ -161,19 +185,22 @@ jobs:
           ]
         )
         """
-        
+
         with open("version_info.txt", "w", encoding="utf-8") as f:
             f.write(content)
             print(f"Generated version_info.txt for version {ver_str}")
         EOF
-        
+
         python generate_version.py
       shell: bash
 
+    # =============================================
+    # PyInstaller 打包
+    # =============================================
     - name: Package with PyInstaller
       run: |
         ICON_NAME="bilibili.${{ matrix.icon_ext }}"
-        
+
         EXTRA_ARGS=""
         if [ "${{ matrix.os }}" == "windows-latest" ]; then
            EXTRA_ARGS="--version-file=version_info.txt"
@@ -211,30 +238,149 @@ jobs:
 
       shell: bash
 
-    - name: Prepare Artifacts
+    # =============================================
+    # 构建安装包
+    # =============================================
+
+    # --- Windows: Inno Setup 安装包 ---
+    - name: Build Windows Installer (Inno Setup)
+      if: matrix.os == 'windows-latest'
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        $issContent = Get-Content "packaging/windows/installer.iss" -Raw
+        $issContent = $issContent.Replace('{#AppVersion}', $version)
+        Set-Content "packaging/windows/installer.iss" $issContent
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "packaging/windows/installer.iss"
+        New-Item -ItemType Directory -Force -Path installers
+        Move-Item -Path "BiliLiveTool-*-Setup.exe" -Destination installers/
+      shell: pwsh
+
+    # --- macOS: .dmg ---
+    - name: Build macOS DMG
+      if: startsWith(matrix.os, 'macos-')
       run: |
         VERSION="${{ github.ref_name }}"
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          EXE_NAME="BiliLiveTool.exe"
-          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.zip"
-          mv dist/$EXE_NAME .
-          7z a $ASSET_NAME $EXE_NAME
-        elif [ "${{ startsWith(matrix.os, 'macos') }}" == "true" ]; then
-          APP_NAME="BiliLiveTool.app"
-          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.zip"
-          7z a -r $ASSET_NAME dist/$APP_NAME
-        else # Linux
-          ASSET_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.tar.gz"
-          tar -czvf $ASSET_NAME -C dist BiliLiveTool
+        DMG_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.dmg"
+
+        # 安装 create-dmg
+        git clone --depth=1 https://github.com/sindresorhus/create-dmg.git /tmp/create-dmg
+
+        # 在 dist/ 里找到 .app
+        APP_PATH=$(find dist -name "*.app" -type d | head -1)
+        if [ -z "$APP_PATH" ]; then
+          echo "No .app found in dist/"
+          exit 1
         fi
-        echo "ASSET_NAME=${ASSET_NAME}" >> $GITHUB_ENV
+
+        # 创建 DMG
+        bash /tmp/create-dmg/create-dmg \
+          --window-pos 200 200 \
+          --window-size 600 400 \
+          --app-drop-link 420 150 \
+          --icon "BiliLiveTool" 150 150 \
+          --icon-size 80 \
+          --no-internet-enable \
+          "$DMG_NAME" \
+          "$APP_PATH"
+
+        mkdir -p installers
+        mv "$DMG_NAME" installers/
       shell: bash
 
-    - name: Upload Artifact
+    # --- Linux: AppImage + .deb ---
+    - name: Build Linux AppImage and .deb
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: |
+        VERSION="${{ github.ref_name }}"
+        CLEAN_VER="${VERSION#v}"
+        ARCH="${{ matrix.arch }}"  # linux-amd64 or linux-arm64
+
+        # 确定架构名用于 deb
+        if [ "${{ matrix.arch }}" == "linux-arm64" ]; then
+          DEB_ARCH="arm64"
+        else
+          DEB_ARCH="amd64"
+        fi
+
+        BINARY="dist/BiliLiveTool"
+        if [ ! -f "$BINARY" ]; then
+          echo "Binary not found at $BINARY"
+          ls -la dist/
+          exit 1
+        fi
+
+        mkdir -p installers
+
+        # ========== .deb 打包 ==========
+        DEB_DIR="deb-pkg/BiliLiveTool_${CLEAN_VER}_${DEB_ARCH}"
+        mkdir -p "${DEB_DIR}/DEBIAN"
+        mkdir -p "${DEB_DIR}/usr/bin"
+        mkdir -p "${DEB_DIR}/usr/share/applications"
+        mkdir -p "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps"
+        mkdir -p "${DEB_DIR}/usr/share/metainfo"
+
+        # 用 printf 代替 heredoc，避免 YAML 解析问题
+        printf 'Package: bilibili-live-tool\nVersion: %s\nArchitecture: %s\nMaintainer: BiliLiveTool Open Source\nDescription: Bilibili 直播弹幕管理与推流工具\n 自动获取推流码、弹幕监控、发送弹幕，配合 OBS 推流。\nDepends: libnss3, libxcb-xinerama0, libxcb-cursor0\nSection: net\nPriority: optional\nHomepage: https://github.com/wsyb/bilibili_live_stream_code\n' \
+          "${CLEAN_VER}" "${DEB_ARCH}" \
+          > "${DEB_DIR}/DEBIAN/control"
+
+        install -m 755 "$BINARY" "${DEB_DIR}/usr/bin/bilibili-live"
+        install -m 644 "bilibili.png" "${DEB_DIR}/usr/share/icons/hicolor/256x256/apps/bilibili-live.png"
+        install -m 644 "packaging/linux/BiliLiveTool.desktop" "${DEB_DIR}/usr/share/applications/bilibili-live.desktop"
+        install -m 644 "packaging/linux/bilibili-live.appdata.xml" "${DEB_DIR}/usr/share/metainfo/bilibili-live.appdata.xml"
+
+        dpkg-deb --build "${DEB_DIR}"
+        mv "deb-pkg/BiliLiveTool_${CLEAN_VER}_${DEB_ARCH}.deb" "installers/"
+
+        # ========== AppImage 打包 ==========
+        APPDIR="AppDir"
+        mkdir -p "${APPDIR}/usr/bin"
+        mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
+        mkdir -p "${APPDIR}/usr/share/applications"
+
+        install -m 755 "$BINARY" "${APPDIR}/usr/bin/bilibili-live"
+        install -m 644 "bilibili.png" "${APPDIR}/bilibili-live.png"
+        install -m 644 "bilibili.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/bilibili-live.png"
+        install -m 644 "packaging/linux/BiliLiveTool.desktop" "${APPDIR}/bilibili-live.desktop"
+
+        # 用 printf 写 desktop 文件，避免 heredoc + YAML 解析问题
+        printf '%s\n' \
+          '[Desktop Entry]' \
+          'Name=B站直播工具' \
+          'Comment=Bilibili 直播弹幕管理与推流工具' \
+          'Exec=bilibili-live' \
+          'Icon=bilibili-live' \
+          'Terminal=false' \
+          'Type=Application' \
+          'Categories=Utility;Network;' \
+          'StartupNotify=true' \
+          > "${APPDIR}/bilibili-live.desktop"
+
+        # 创建 AppRun
+        printf '%s\n' \
+          '#!/bin/bash' \
+          'APPDIR="$(dirname "$(readlink -f "$0")")"' \
+          'export PATH="${APPDIR}/usr/bin:${PATH}"' \
+          'export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --enable-features=UseOzonePlatform"' \
+          'exec "${APPDIR}/usr/bin/bilibili-live" "$@"' \
+          > "${APPDIR}/AppRun"
+        chmod +x "${APPDIR}/AppRun"
+
+        # 使用 appimagetool
+        /tmp/appimagetool "${APPDIR}" "installers/BiliLiveTool-${VERSION}-${ARCH}.AppImage"
+
+        echo "Packaging complete for ${ARCH}:"
+        ls -lh installers/
+      shell: bash
+
+    # =============================================
+    # 上传 Artifact（供 create-release 使用）
+    # =============================================
+    - name: Upload Installer Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: BiliLiveTool-${{ github.ref_name }}-${{ matrix.arch }}
-        path: ${{ env.ASSET_NAME }}
+        path: installers/*
 
   create-release:
     name: Create GitHub Release
@@ -247,26 +393,28 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # 必须拉取所有历史记录以便对比 tag
+        fetch-depth: 0
 
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
+    - name: List downloaded artifacts
+      run: find artifacts -type f | sort
+      shell: bash
+
     - name: Get Raw Git Changelog
       id: raw_changelog
       run: |
-        # 获取上次的 tag
         PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-        
+
         if [ -z "$PREVIOUS_TAG" ]; then
           LOGS=$(git log --no-merges --pretty=format:"- %s" | grep -v "chore: update VERSION")
         else
           LOGS=$(git log --no-merges --pretty=format:"- %s" $PREVIOUS_TAG..HEAD | grep -v "chore: update VERSION")
         fi
-        
-        # 将原始日志写入环境变量
+
         echo "RAW_CHANGELOG<<EOF" >> $GITHUB_ENV
         echo "$LOGS" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
@@ -277,34 +425,33 @@ jobs:
       env:
         DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       run: |
-        # 使用内置的 python3 发送请求给 DeepSeek
         python3 -c "
         import os, json, urllib.request
-        
+
         api_key = os.environ.get('DEEPSEEK_API_KEY')
         raw_log = os.environ.get('RAW_CHANGELOG', '').strip()
         env_file = os.environ.get('GITHUB_ENV')
-        
+
         def write_env(content):
             with open(env_file, 'a', encoding='utf-8') as f:
                 f.write('AI_CHANGELOG<<EOF\n')
                 f.write(content + '\n')
                 f.write('EOF\n')
-        
+
         if not api_key or not raw_log:
             print('Missing API Key or empty changelog. Using raw logs.')
             write_env(raw_log if raw_log else 'No changes detected.')
             exit(0)
-            
+
         prompt = f'''请作为一名专业的产品经理，将以下原始的 git commit 日志总结为一份面向普通用户的版本更新说明 (Release Notes)。
         要求：
         1. 忽略纯代码格式化、错别字修改或无意义的琐碎提交。
         2. 将更新内容分类，例如使用：'✨ 新特性', '🐛 问题修复', '🔧 体验优化' 等标题。
         3. 语气要友好、专业，排版使用 Markdown 格式。
         4. 直接输出总结内容，不要包含多余的寒暄语。
-        
+
         原始日志如下：\n{raw_log}'''
-        
+
         url = 'https://api.deepseek.com/chat/completions'
         headers = {
             'Content-Type': 'application/json',
@@ -315,7 +462,7 @@ jobs:
             'messages': [{'role': 'user', 'content': prompt}],
             'temperature': 0.3
         }
-        
+
         req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
         try:
             with urllib.request.urlopen(req) as response:
@@ -336,24 +483,29 @@ jobs:
         files: artifacts/*/*
         body: |
           ## 🚀 BiliLiveTool ${{ github.ref_name }} 发布
-          
+
           ${{ env.AI_CHANGELOG }}
-          
+
           ---
-          
+
           ### 📦 下载地址
           请根据您的系统选择对应的版本进行下载：
-          - **Windows (amd64)**: `windows-amd64.zip`
-          - **macOS (Intel)**: `macos-amd64.zip`
-          - **macOS (Apple Silicon)**: `macos-arm64.zip`
-          - **Linux (amd64)**: `linux-amd64.tar.gz`
-          - **Linux (ARM64)**: `linux-arm64.tar.gz`
+
+          | 平台 | 架构 | 格式 |
+          |------|------|------|
+          | Windows | amd64 | `BiliLiveTool-*-windows-amd64-Setup.exe` (安装包) |
+          | macOS | Intel | `BiliLiveTool-*-macos-amd64.dmg` |
+          | macOS | Apple Silicon | `BiliLiveTool-*-macos-arm64.dmg` |
+          | Linux | amd64 | `BiliLiveTool-*-linux-amd64.AppImage` (通用) |
+          | Linux | amd64 | `BiliLiveTool-*-linux-amd64.deb` (Ubuntu/Debian) |
+          | Linux | ARM64 | `BiliLiveTool-*-linux-arm64.AppImage` (通用) |
+          | Linux | ARM64 | `BiliLiveTool-*-linux-arm64.deb` (Ubuntu/Debian) |
 
           ### 🛡️ Windows 用户安全提示
           如果您在 Windows 上运行遇到 **"Windows 已保护你的电脑"** (SmartScreen) 蓝框提示：
           1. 点击 **"更多信息" (More Info)**
           2. 点击 **"仍要运行" (Run Anyway)**
-          
+
           > 💡 这是因为开源软件通常未购买数字签名证书，属于正常拦截现象，请放心使用。
 
         draft: false
