@@ -17,6 +17,37 @@
 5. 在 *弹幕* 界面，可以查看并发送弹幕；
 6. 点击 `停止直播` 或关闭软件来停止直播，**使用 OBS 的 `停止直播` 并不会停止直播**；
 
+## Ubuntu 26 (Wayland) 适配说明
+
+本分支针对 **Ubuntu 26 (GNOME + Wayland)** 进行了以下适配优化：
+
+### 1. Wayland 原生支持
+- 移除硬编码的 `GDK_BACKEND=x11`、`QT_QPA_PLATFORM=xcb` 等 X11 强制环境变量
+- 移除 `QTWEBENGINE_CHROMIUM_FLAGS` 中的 `--ozone-platform=x11`
+- 移除 `--disable-gpu`，启用 GPU 加速渲染
+
+### 2. HiDPI 高分屏缩放
+- 启用 `QT_AUTO_SCREEN_SCALE_FACTOR` 和 `QT_ENABLE_HIGHDPI_SCALING`
+- 自动检测 GNOME 系统缩放因子（scaling-factor / text-scaling-factor）
+- 窗口初始尺寸根据缩放比例自动适配
+
+### 3. 暗黑模式（自动跟随系统）
+- 完整的 CSS 变量体系，`prefers-color-scheme` 媒体查询
+- 12 个 Vue 组件的硬编码颜色全部替换为 CSS 变量
+- **Python 端检测**：通过 `gsettings` 读取 GNOME 暗色模式设置
+- **JS 兜底**：`matchMedia('prefers-color-scheme')` 检测 + `html[data-theme]` 属性
+- 跨平台兼容：Windows (注册表)、macOS (defaults 命令) 同样支持
+
+### 4. GNOME Dock 图标
+- 设置 `QT_WAYLAND_APP_ID` 和 `RESOURCE_NAME` 环境变量
+- Qt 启动后调用 `setDesktopFileName()` 和 `setApplicationName()`
+- Dock 右键图标正常显示，右键"退出"可直接关闭程序
+
+### 5. 托盘图标说明
+- GNOME Wayland 下系统托盘（`QSystemTrayIcon`）可能不可用
+- 可在"控制台"面板关闭"关闭时最小化到托盘"选项
+- Linux 下关闭窗口始终直接退出，不再最小化
+
 ## 自行构建
 
 ### 环境要求
@@ -29,7 +60,7 @@
 1. **克隆仓库**
 
    ```bash
-   git clone https://github.com/ChaceQC/bilibili_live_stream_code.git
+   git clone https://github.com/wsyb/bilibili_live_stream_code.git
    cd bilibili_live_stream_code
    ```
 
