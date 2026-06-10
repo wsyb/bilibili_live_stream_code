@@ -3,14 +3,11 @@ import sys
 
 # [修复] 根据平台设置不同的环境变量
 if sys.platform == 'linux':
-    os.environ["GDK_BACKEND"] = "x11"
-    os.environ["QT_QPA_PLATFORM"] = "xcb"
     os.environ["QT_STYLE_OVERRIDE"] = "Fusion"
-    os.environ["XDG_SESSION_TYPE"] = "cxb"
-    if "QT_QPA_PLATFORMTHEME" in os.environ:
-        os.environ["QT_QPA_PLATFORMTHEME"] = ""
-    os.environ["QT_XCB_GL_INTEGRATION"] = "none"
-    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --no-sandbox --enable-features=UseOzonePlatform --ozone-platform=x11"
+    # [修复] 启用 HiDPI 自动缩放（Wayland/X11 均生效）
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --enable-features=UseOzonePlatform"
 elif sys.platform == 'win32':
     os.environ["QT_OPENGL"] = "software"
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer"
@@ -123,6 +120,33 @@ if __name__ == '__main__':
     if sys.platform == 'win32':
         _enable_windows_dpi_awareness()
         scale = _get_primary_monitor_scale_win()
+    elif sys.platform == 'linux':
+        # [修复] 检测 Linux 下的系统缩放因子，用于调整窗口尺寸
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['gsettings', 'get', 'org.gnome.desktop.interface', 'scaling-factor'],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                val = int(result.stdout.strip())
+                if val > 1:
+                    scale = float(val)
+        except Exception:
+            pass
+        # 如果 scale 仍是 1.0，再尝试读取文本缩放因子（用于 125%/150% 等分数缩放）
+        if scale == 1.0:
+            try:
+                result = subprocess.run(
+                    ['gsettings', 'get', 'org.gnome.desktop.interface', 'text-scaling-factor'],
+                    capture_output=True, text=True, timeout=2
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    val = float(result.stdout.strip())
+                    if val > 1.1:
+                        scale = val
+            except Exception:
+                pass
     window = webview.create_window(
         'B站直播工具',
         url=get_html_path(),

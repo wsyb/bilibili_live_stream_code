@@ -35,9 +35,9 @@ class UserService:
         config_data = self.config_manager.data
         if "users" not in config_data: config_data["users"] = {}
         old_data = config_data["users"].get(uid, {})
-        level_info = full_data.get("level_info", {})
-        wallet = full_data.get("wallet", {})
-        stat = full_data.get("stat", {})
+        level_info = full_data.get("level_info") or {}
+        wallet = full_data.get("wallet") or {}
+        stat = full_data.get("stat") or {}
         new_data = {
             "uid": uid, "uname": full_data.get("uname", "未知用户"), "face": full_data.get("face", ""),
             "cookie": cookie_str, "roomId": str(room_id), "csrf": csrf,
