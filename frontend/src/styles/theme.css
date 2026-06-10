@@ -1,11 +1,71 @@
 :root {
+  /* 基础背景色 */
   --bg-color: #FFFFFF;
   --surface-color: #F0F4F9;
+  --surface-alt: #f5f5f5;
+
+  /* 卡片 */
+  --card-bg: #FFFFFF;
+  --card-border: #E0E0E0;
+
+  /* 品牌色 */
   --primary-color: #0B57D0;
+  --primary-hover: #5189E0;
+
+  /* B站品牌色（保持固定） */
+  --bili-pink: #FB7299;
+  --bili-blue: #00aeec;
+
+  /* 文字 */
   --text-main: #1F1F1F;
   --text-sub: #444746;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+
+  /* 边框 */
+  --border-color: #e0e0e0;
+  --border-light: #eee;
+
+  /* 交互 */
+  --hover-bg: rgba(0,0,0,0.05);
+  --hover-bg-dark: rgba(0,0,0,0.1);
+
+  /* 危险/删除 */
+  --danger: #D93025;
+  --danger-bg: #FFEBEB;
+
+  /* 通用 */
   --border-radius: 16px;
   --transition: all 0.2s ease;
+}
+
+/* ===== 暗黑模式（跟随系统） ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #1e1e2e;
+    --surface-color: #2d2d3f;
+    --surface-alt: #363649;
+
+    --card-bg: #2d2d3f;
+    --card-border: #3d3d4f;
+
+    --primary-color: #4a9eff;
+    --primary-hover: #669DF6;
+
+    --text-main: #e0e0e0;
+    --text-sub: #a0a0a0;
+    --text-secondary: #a0a0a0;
+    --text-tertiary: #808080;
+
+    --border-color: #3d3d4f;
+    --border-light: #3a3a4a;
+
+    --hover-bg: rgba(255,255,255,0.05);
+    --hover-bg-dark: rgba(255,255,255,0.1);
+
+    --danger: #f28b82;
+    --danger-bg: rgba(242,139,130,0.15);
+  }
 }
 
 body {
@@ -28,11 +88,12 @@ body {
   outline: none;
   transition: var(--transition);
   font-size: 14px;
+  color: var(--text-main);
 }
 .gemini-input:focus {
-  background: #FFF;
+  background: var(--card-bg);
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(11,87,208,0.1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
 .btn {
@@ -50,11 +111,11 @@ body {
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
 
 .btn-secondary { background: var(--surface-color); color: var(--text-main); }
-.btn-secondary:hover { background: #E0E0E0; }
+.btn-secondary:hover { background: var(--hover-bg-dark); }
 
 .card {
-  background: #FFF;
-  border: 1px solid #E0E0E0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
   padding: 24px;
   margin-bottom: 16px;
@@ -70,13 +131,13 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 .modal {
-  background: white; padding: 30px; border-radius: 16px;
+  background: var(--card-bg); padding: 30px; border-radius: 16px;
   text-align: center; width: 320px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 .qr-box {
   margin: 20px auto; width: 200px; height: 200px;
-  background: #f5f5f5; display: flex; align-items: center; justify-content: center;
+  background: var(--surface-alt); display: flex; align-items: center; justify-content: center;
   border-radius: 8px; overflow: hidden;
 }
 .qr-box img { width: 100%; height: 100%; }

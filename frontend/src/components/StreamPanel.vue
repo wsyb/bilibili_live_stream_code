@@ -199,7 +199,7 @@ const subPartitions = computed(() => {
 
 .config-card {
   padding: 24px;
-  border: 1px solid #e0e3e7;
+  border: 1px solid var(--border-color);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
@@ -320,7 +320,7 @@ const subPartitions = computed(() => {
 
 .modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -335,19 +335,19 @@ const subPartitions = computed(() => {
   background: none;
   border: none;
   font-size: 24px;
-  color: #999;
+  color: var(--text-tertiary);
   cursor: pointer;
   line-height: 1;
 }
 
 .qr-container {
   padding: 30px;
-  background: #f8f9fa;
+  background: var(--surface-alt);
   position: relative;
 }
 
 .qr-box {
-  background: white;
+  background: var(--card-bg);
   padding: 12px;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
@@ -358,7 +358,7 @@ const subPartitions = computed(() => {
   padding: 0 20px;
   margin: 20px 0;
   font-size: 14px;
-  color: #444;
+  color: var(--text-sub);
 }
 
 .full-width {

@@ -160,7 +160,7 @@ onActivated(() => {
   width: 80%;
   margin: 0 auto;
 
-  background: #f2f2f2; /* QQ 经典的浅灰底色 */
+  background: var(--surface-alt); /* QQ 经典的浅灰底色 */
   border-radius: 16px; /* 圆润边框 */
   overflow: hidden;
   font-family: "PingFang SC", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
@@ -173,19 +173,19 @@ onActivated(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f9f9f9;
+  background: var(--surface-alt);
 }
 
 .danmu-header h3 {
   margin: 0;
   font-size: 15px;
-  color: #333;
+  color: var(--text-main);
   font-weight: 600;
 }
 
 .controls {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
   user-select: none;
 }
 .controls input {
@@ -197,7 +197,7 @@ onActivated(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background: #f2f2f2;
+  background: var(--surface-alt);
 }
 
 /* 隐藏滚动条但保留功能 */
@@ -249,7 +249,7 @@ onActivated(() => {
 
 .uname {
   font-size: 12px;
-  color: #888;
+  color: var(--text-tertiary);
   margin-bottom: 4px;
   margin-left: 2px;
   line-height: 1;
@@ -258,8 +258,8 @@ onActivated(() => {
 /* 4. 气泡 */
 .bubble {
   position: relative;
-  background-color: #ffffff;
-  color: #111;
+  background-color: var(--card-bg);
+  color: var(--text-main);
   padding: 9px 13px;
   border-radius: 10px;
   font-size: 14px;
@@ -278,7 +278,7 @@ onActivated(() => {
   height: 0;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
-  border-right: 6px solid #ffffff;
+  border-right: 6px solid var(--card-bg);
 }
 
 /* === 系统消息样式 === */
@@ -293,8 +293,8 @@ onActivated(() => {
 }
 
 .system-msg.interact {
-  color: #888;
-  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-tertiary);
+  background: var(--hover-bg);
 }
 
 .system-msg.gift {
@@ -316,7 +316,7 @@ onActivated(() => {
 /* === 发送区域样式 === */
 .send-area {
   padding: 12px 16px;
-  background: #f9f9f9;
+  background: var(--surface-alt);
   border-top: 1px solid rgba(0,0,0,0.06);
   display: flex;
   gap: 10px;
@@ -326,11 +326,11 @@ onActivated(() => {
 .send-area input {
   flex: 1;
   padding: 8px 14px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   outline: none;
   font-size: 14px;
-  background: #fff;
+  background: var(--card-bg);
   transition: all 0.2s;
 }
 
@@ -357,8 +357,8 @@ onActivated(() => {
 }
 
 .send-area button:disabled {
-  background: #e0e0e0;
-  color: #aaa;
+  background: var(--border-color);
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 

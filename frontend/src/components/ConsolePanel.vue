@@ -106,7 +106,7 @@ watch(() => state.logs.length, () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--border-color);
   transition: .4s;
   border-radius: 20px;
 }
@@ -118,7 +118,7 @@ watch(() => state.logs.length, () => {
   width: 16px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: var(--text-main);
   transition: .4s;
   border-radius: 50%;
 }

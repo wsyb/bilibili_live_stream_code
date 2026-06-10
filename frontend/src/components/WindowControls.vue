@@ -40,12 +40,12 @@ const handleMax = async () => {
   width: 46px; height: 32px;
   background: transparent; border: none;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: #555;
+  cursor: pointer; color: var(--text-secondary);
   transition: background 0.2s;
   /* [修复] 明确按钮本身不可拖拽，这是最关键的修复 */
   -webkit-app-region: no-drag;
 }
-.win-btn:hover { background: rgba(0,0,0,0.1); }
+.win-btn:hover { background: var(--hover-bg-dark); }
 .win-btn.close:hover { background: #e81123; color: white; }
 svg { fill: currentColor; }
 </style>

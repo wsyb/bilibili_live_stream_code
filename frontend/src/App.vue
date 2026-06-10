@@ -250,7 +250,7 @@ const handleSidebarAccountClick = () => {
 }
 
 .app-title {
-  font-size: 12px; margin-left: 12px; color: #666; font-weight: 500;
+  font-size: 12px; margin-left: 12px; color: var(--text-secondary); font-weight: 500;
   pointer-events: none;
 }
 
@@ -265,12 +265,12 @@ const handleSidebarAccountClick = () => {
 
 /* 托盘人脸认证弹窗 */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-.tray-verify-modal { width: 340px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
-.tray-verify-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.tray-verify-modal { width: 340px; background: var(--card-bg); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+.tray-verify-header { padding: 16px 20px; border-bottom: var(--border-light); display: flex; justify-content: space-between; align-items: center; }
 .tray-verify-header h3 { margin: 0; font-size: 16px; color: var(--text-main); }
-.tray-close-btn { background: none; border: none; font-size: 24px; color: #999; cursor: pointer; line-height: 1; }
-.tray-close-btn:hover { color: #333; }
-.tray-qr-container { padding: 30px; background: #f8f9fa; position: relative; display: flex; justify-content: center; }
+.tray-close-btn { background: none; border: none; font-size: 24px; color: var(--text-tertiary); cursor: pointer; line-height: 1; }
+.tray-close-btn:hover { color: var(--text-main); }
+.tray-qr-container { padding: 30px; background: var(--surface-alt); position: relative; display: flex; justify-content: center; }
 .tray-qr-box { background: white; padding: 12px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
 .tray-qr-box img { display: block; }
 .tray-qr-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #999; }
