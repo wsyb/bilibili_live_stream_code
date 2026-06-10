@@ -13,7 +13,7 @@ jobs:
       contents: write
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         ref: master
 
@@ -32,6 +32,7 @@ jobs:
     needs: update-version
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-22.04
@@ -65,12 +66,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         ref: master
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -99,6 +100,12 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libnss3 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrender1 libxtst6 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xinerama0 libxcb1 libxkbcommon-x11-0 libxkbcommon0
+
+    # ARM64 上 PyQt5 无预编译 wheel，需从源码编译
+    - name: Install ARM Qt5 Build Dependencies
+      if: matrix.is_arm == true
+      run: |
+        sudo apt-get install -y qtbase5-dev qtwebengine5-dev libqt5webchannel5-dev
 
     - name: Install Linux Packaging Tools (AppImage + deb)
       if: startsWith(matrix.os, 'ubuntu-')
@@ -391,7 +398,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
