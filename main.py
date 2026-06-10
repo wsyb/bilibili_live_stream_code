@@ -7,6 +7,10 @@ if sys.platform == 'linux':
     # [修复] 启用 HiDPI 自动缩放（Wayland/X11 均生效）
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+    # [修复] 设置 Wayland app_id，确保 GNOME Dock 能匹配到 .desktop 文件
+    os.environ["QT_WAYLAND_APP_ID"] = "bilibili-live"
+    # [修复] X11 下设置 WM_CLASS res_name（Wayland 下 GNOME 也会参考这个）
+    os.environ["RESOURCE_NAME"] = "bilibili-live"
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --enable-features=UseOzonePlatform"
 elif sys.platform == 'win32':
     os.environ["QT_OPENGL"] = "software"
@@ -117,9 +121,22 @@ if __name__ == '__main__':
     window_width = 1000
     window_height = 720
     scale = 1.0
+    # [修复] 跨平台暗色主题检测（Qt WebEngine 不传递 prefers-color-scheme）
+    is_dark_theme = False
     if sys.platform == 'win32':
         _enable_windows_dpi_awareness()
         scale = _get_primary_monitor_scale_win()
+        # Windows: 读取注册表检测暗色模式
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['powershell', '-Command', '(Get-ItemProperty -Path "HKCU:Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize").AppsUseLightTheme'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip() == '0':
+                is_dark_theme = True
+        except Exception:
+            pass
     elif sys.platform == 'linux':
         # [修复] 检测 Linux 下的系统缩放因子，用于调整窗口尺寸
         try:
@@ -147,6 +164,38 @@ if __name__ == '__main__':
                         scale = val
             except Exception:
                 pass
+        # [修复] 检测系统暗色主题（Qt WebEngine 无法识别 prefers-color-scheme）
+        try:
+            result = subprocess.run(
+                ['gsettings', 'get', 'org.gnome.desktop.interface', 'color-scheme'],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode == 0 and 'prefer-dark' in result.stdout:
+                is_dark_theme = True
+        except Exception:
+            pass
+        # 备用检测：gtk-theme 名包含 dark
+        if not is_dark_theme:
+            try:
+                result = subprocess.run(
+                    ['gsettings', 'get', 'org.gnome.desktop.interface', 'gtk-theme'],
+                    capture_output=True, text=True, timeout=2
+                )
+                if result.returncode == 0 and 'dark' in result.stdout.lower():
+                    is_dark_theme = True
+            except Exception:
+                pass
+    elif sys.platform == 'darwin':
+        # macOS: defaults 命令检测暗色模式
+        try:
+            result = subprocess.run(
+                ['defaults', 'read', '-g', 'AppleInterfaceStyle'],
+                capture_output=True, text=True, timeout=2
+            )
+            if result.returncode == 0 and 'dark' in result.stdout.lower():
+                is_dark_theme = True
+        except Exception:
+            pass
     window = webview.create_window(
         'B站直播工具',
         url=get_html_path(),
@@ -321,20 +370,9 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"Error reading config: {e}")
 
-            if min_to_tray and tray_state.get('tray_active', False):
-                # 最小化到托盘
-                if sys.platform == 'win32':
-                    window.hide()
-                else:
-                    # [Fix] Linux Qt backend: hide() 可能导致窗口无法恢复，用 minimize 代替
-                    window.minimize()
-                # [Fix] 异步通知前端暂停轮询，不能同步调用 evaluate_js，否则在 UI 线程死锁
-                threading.Thread(
-                    target=lambda: api.window_service.send_to_frontend("onAppHidden", None),
-                    daemon=True
-                ).start()
-                return False  # 阻止窗口关闭
-            else:
+            # Linux: 直接退出（Wayland 下最小化无意义，托盘也不可靠）
+            # Windows: 按用户配置决定是否最小化到托盘
+            if sys.platform == 'linux' or not (min_to_tray and tray_state.get('tray_active', False)):
                 # 直接退出模式
                 tray_state['is_exiting'] = True
                 if sys.platform == 'win32' and tray_icon:
@@ -348,6 +386,15 @@ if __name__ == '__main__':
                     os._exit(0)
 
                 return True  # 允许窗口关闭 (pywebview 会退出)
+            else:
+                # Windows: 最小化到托盘
+                window.hide()
+                # [Fix] 异步通知前端暂停轮询，不能同步调用 evaluate_js，否则在 UI 线程死锁
+                threading.Thread(
+                    target=lambda: api.window_service.send_to_frontend("onAppHidden", None),
+                    daemon=True
+                ).start()
+                return False  # 阻止窗口关闭
         except Exception as e:
             print(f"Error in on_closing: {e}")
             return True
@@ -502,13 +549,29 @@ if __name__ == '__main__':
 
     # 定义启动回调：先显示窗口，再初始化 Linux 托盘
     def on_app_start(window_obj=None):
-        if window_obj:
-            center_and_show_window(window_obj)
-        else:
-            center_and_show_window(window) # Fallback to global if None passed
-            
+        w = window_obj if window_obj else window
+        center_and_show_window(w)
+
+        # [修复] Python 检测的暗色主题注入到前端（全平台通用）
+        if is_dark_theme:
+            try:
+                w.evaluate_js('document.documentElement.setAttribute("data-theme","dark")')
+                logger.info("Injected dark theme to frontend")
+            except Exception as e:
+                print(f"Failed to inject dark theme: {e}")
+
         if sys.platform != 'win32':
-             # 允许通过环境变量禁用托盘，方便排查崩溃问题
+            # [修复] 设置 Qt 应用标识，确保 GNOME Dock 能匹配到 .desktop 文件
+            try:
+                from qtpy.QtWidgets import QApplication
+                app = QApplication.instance()
+                if app:
+                    app.setDesktopFileName("bilibili-live")
+                    app.setApplicationName("bilibili-live")
+            except Exception:
+                pass
+
+            # 允许通过环境变量禁用托盘，方便排查崩溃问题
             if os.environ.get("DISABLE_TRAY", "0") == "1":
                 print("Linux tray disabled by environment variable.")
                 return

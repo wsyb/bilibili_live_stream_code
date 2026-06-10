@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BiliLive Tool</title>
+    <!-- [修复] JS 检测系统暗色主题，兼容 Qt WebEngine 无法识别 prefers-color-scheme 的问题 -->
+    <script>
+      (function() {
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        function updateTheme(e) {
+          document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+        }
+        mq.addEventListener('change', updateTheme);
+        updateTheme(mq);
+      })();
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
