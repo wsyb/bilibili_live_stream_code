@@ -104,7 +104,14 @@ jobs:
     - name: Install ARM Qt5 Build Dependencies
       if: startsWith(matrix.os, 'ubuntu-') && matrix.is_arm == true
       run: |
-        sudo apt-get install -y qtbase5-dev qtwebengine5-dev libqt5webchannel5-dev libqscintilla2-dev pyqt5-dev-tools sip-dev
+        sudo apt-get install -y qtbase5-dev qtwebengine5-dev libqt5webchannel5-dev
+        # 确保 qmake 在 PATH 中
+        QMAKE_PATH=$(find /usr -name "qmake" -type f 2>/dev/null | head -1)
+        if [ -n "$QMAKE_PATH" ]; then
+          sudo ln -sf "$QMAKE_PATH" /usr/local/bin/qmake
+        fi
+        # 安装 pip 编译所需工具
+        pip install --upgrade pip setuptools wheel sip sip-build-tools
 
     - name: Install Linux Packaging Tools (AppImage + deb)
       if: startsWith(matrix.os, 'ubuntu-')
@@ -263,33 +270,30 @@ jobs:
         Move-Item -Path "BiliLiveTool-*-Setup.exe" -Destination installers/
       shell: pwsh
 
-    # --- macOS: .dmg ---
+    # --- macOS: .dmg (使用内置 hdiutil，无需第三方工具) ---
     - name: Build macOS DMG
       if: startsWith(matrix.os, 'macos-')
       run: |
         VERSION="${{ github.ref_name }}"
         DMG_NAME="BiliLiveTool-${VERSION}-${{ matrix.arch }}.dmg"
-
-        # 安装 create-dmg
-        git clone --depth=1 https://github.com/sindresorhus/create-dmg.git /tmp/create-dmg
+        VOLUME_NAME="B站直播工具 ${VERSION#v}"
 
         # 在 dist/ 里找到 .app
         APP_PATH=$(find dist -name "*.app" -type d | head -1)
         if [ -z "$APP_PATH" ]; then
           echo "No .app found in dist/"
+          ls -la dist/
           exit 1
         fi
+        echo "Found .app at: $APP_PATH"
 
-        # 创建 DMG
-        bash /tmp/create-dmg/create-dmg \
-          --window-pos 200 200 \
-          --window-size 600 400 \
-          --app-drop-link 420 150 \
-          --icon "BiliLiveTool" 150 150 \
-          --icon-size 80 \
-          --no-internet-enable \
-          "$DMG_NAME" \
-          "$APP_PATH"
+        # 使用 hdiutil 创建 DMG（macOS 内置，无需额外安装）
+        mkdir -p /tmp/dmg
+        cp -R "$APP_PATH" /tmp/dmg/
+        hdiutil create -volname "$VOLUME_NAME" \
+          -srcfolder /tmp/dmg \
+          -ov -format UDZO \
+          "$DMG_NAME"
 
         mkdir -p installers
         mv "$DMG_NAME" installers/
