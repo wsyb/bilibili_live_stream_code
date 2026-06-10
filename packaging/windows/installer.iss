@@ -35,8 +35,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "快捷方式:"; Flags: checkedonce
 
 [Files]
-Source: "dist\BiliLiveTool.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "bilibili.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\dist\BiliLiveTool.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\bilibili.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
