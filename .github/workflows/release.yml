@@ -95,22 +95,16 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libnss3 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrender1 libxtst6 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xinerama0 libxcb1 libxkbcommon-x11-0 libxkbcommon0
-    # ARM64 Linux 上 PyQt5 无预编译 wheel，需在 pip install 前准备 qmake 和 QtWebEngine 头文件
-    - name: Install ARM Qt5 Build Dependencies
-      if: startsWith(matrix.os, 'ubuntu-') && matrix.is_arm == true
-      run: |
-        sudo apt-get install -y qtbase5-dev qtwebengine5-dev libqt5webchannel5-dev
-        # 确保 qmake 在 PATH 中
-        QMAKE_PATH=$(find /usr -name "qmake" -type f 2>/dev/null | head -1)
-        if [ -n "$QMAKE_PATH" ]; then
-          sudo ln -sf "$QMAKE_PATH" /usr/local/bin/qmake
-        fi
-        # 安装 pip 编译所需工具
-        pip install --upgrade pip setuptools wheel sip sip-build-tools
-
     - name: Install Backend Dependencies
       run: |
-        pip install -r requirements.txt
+        if [ "${{ matrix.arch }}" = "linux-arm64" ]; then
+          # PyQt5/PyQtWebEngine 没有可用的 Linux ARM64 wheel，避免源码编译，改用有 wheel 的 PyQt6。
+          grep -vE '^(PyQt5|PyQtWebEngine)' requirements.txt > /tmp/requirements-ci.txt
+          pip install -r /tmp/requirements-ci.txt
+          pip install PyQt6 PyQt6-WebEngine
+        else
+          pip install -r requirements.txt
+        fi
         pip install pyinstaller Pillow
 
     - name: Install Linux Packaging Tools (AppImage + deb)
@@ -227,6 +221,11 @@ jobs:
           $EXTRA_ARGS \
           ${{ matrix.pyinstaller_options }}
         elif [ "${{ startsWith(matrix.os, 'ubuntu-') }}" == "true" ]; then
+           QT_BINDING_HIDDEN_IMPORT="PyQt5"
+           if [ "${{ matrix.arch }}" == "linux-arm64" ]; then
+             QT_BINDING_HIDDEN_IMPORT="PyQt6"
+           fi
+
            pyinstaller main.py --name BiliLiveTool --onefile \
             --add-data "frontend/dist:frontend/dist" \
             --add-data "bilibili.ico:." \
@@ -234,7 +233,7 @@ jobs:
             --hidden-import _cffi_backend \
             --hidden-import cffi \
             --hidden-import qtpy \
-            --hidden-import PyQt5 \
+            --hidden-import "$QT_BINDING_HIDDEN_IMPORT" \
             --hidden-import webview.platforms.qt
         elif [ "${{ startsWith(matrix.os, 'macos-') }}" == "true" ]; then
             pyinstaller main.py \
