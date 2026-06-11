@@ -37,7 +37,6 @@ jobs:
         os:
           - ubuntu-22.04
           - ubuntu-24.04-arm
-          - macos-13
           - macos-latest
           - windows-latest
         include:
@@ -50,10 +49,6 @@ jobs:
             pyinstaller_options: ""
             icon_ext: "png"
             is_arm: true
-          - os: macos-13
-            arch: macos-amd64
-            pyinstaller_options: "--windowed"
-            icon_ext: "icns"
           - os: macos-latest
             arch: macos-arm64
             pyinstaller_options: "--windowed"
@@ -508,7 +503,6 @@ jobs:
           | 平台 | 架构 | 格式 |
           |------|------|------|
           | Windows | amd64 | `BiliLiveTool-*-windows-amd64-Setup.exe` (安装包) |
-          | macOS | Intel | `BiliLiveTool-*-macos-amd64.dmg` |
           | macOS | Apple Silicon | `BiliLiveTool-*-macos-arm64.dmg` |
           | Linux | amd64 | `BiliLiveTool-*-linux-amd64.AppImage` (通用) |
           | Linux | amd64 | `BiliLiveTool-*-linux-amd64.deb` (Ubuntu/Debian) |
