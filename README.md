@@ -3,6 +3,8 @@ SPDX-License-Identifier: Apache-2.0
 -->
 # 📺 Bilibili 直播工具
 
+> 📌 本仓库是 [ChaceQC/bilibili_live_stream_code](https://github.com/ChaceQC/bilibili_live_stream_code) 的复刻分支，在原版基础上增加了 Wayland 适配、深色模式、多平台构建等改进。衷心感谢原作者的出色工作。
+
 <div align="center">
 
 ![版本](https://img.shields.io/github/v/release/wsyb/bilibili_live_stream_code?style=flat-square)
@@ -216,10 +218,13 @@ You may obtain a copy of the License at
 
 ## ⭐ Star 历史
 
-[![Stargazers over time](https://starchart.cc/wsyb/bilibili_live_stream_code.svg?variant=adaptive)](https://starchart.cc/wsyb/bilibili_live_stream_code)
+[![Stargazers over time](https://starchart.cc/ChaceQC/bilibili_live_stream_code.svg?variant=adaptive)](https://starchart.cc/ChaceQC/bilibili_live_stream_code)
 
 ---
 
-> **相关项目**：[Zeppelinpp/bilibili-streamer](https://github.com/Zeppelinpp/bilibili-streamer) — 基于 Tauri 2.x (Rust) + React 18 的重构版本，补全了 macOS 适配
+## 🙏 致谢
+
+- [ChaceQC](https://github.com/ChaceQC) — 原版项目的作者，感谢其出色的基础工作
+- [Zeppelinpp/bilibili-streamer](https://github.com/Zeppelinpp/bilibili-streamer) — 基于 Tauri 2.x (Rust) + React 18 的重构版本，补全了 macOS 适配
 
 > **维护者文档**：CI/CD 配置和构建问题详见 [HANDOVER.md](HANDOVER.md)
