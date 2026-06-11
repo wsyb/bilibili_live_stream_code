@@ -40,3 +40,6 @@ uv.lock
 
 # --- AtomCode ---
 .atomcode/
+
+# --- Internal Dev Notes ---
+HANDOVER.md

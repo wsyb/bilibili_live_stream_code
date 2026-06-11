@@ -12,8 +12,8 @@
       <li>自动跟随系统暗色模式</li>
     </ul>
   </description>
-  <metadata_license>MIT</metadata_license>
-  <project_license>MIT</project_license>
+  <metadata_license>Apache-2.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
   <url type="homepage">https://github.com/wsyb/bilibili_live_stream_code</url>
   <screenshots>
     <screenshot type="default">

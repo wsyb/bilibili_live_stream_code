@@ -1,150 +1,225 @@
-# 哔哩哔哩直播工具
+<!--
+SPDX-License-Identifier: Apache-2.0
+-->
+# 📺 Bilibili 直播工具
 
-1. 用于在准备直播时获取第三方推流码，以便可以绕开哔哩哔哩直播姬，直接在如OBS等软件中进行直播；
-2. 支持开播时定义标题和分区；
-3. 支持弹幕监控（含进场消息和礼物消息）以及发送弹幕；
+<div align="center">
 
-## 声明
+![版本](https://img.shields.io/github/v/release/wsyb/bilibili_live_stream_code?style=flat-square)
+![许可证](https://img.shields.io/github/license/wsyb/bilibili_live_stream_code?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue?style=flat-square)
+![Node](https://img.shields.io/badge/Node-18%2B-green?style=flat-square)
+![平台](https://img.shields.io/badge/平台-Windows%20|%20macOS%20|%20Linux-lightgrey?style=flat-square)
 
-**本程序仅用于学习和交流，禁止用于商业或其他目的，任何不当使用导致的问题自行负责。*
+**获取 B 站直播推流码、管理直播、监控弹幕的一站式桌面工具**
 
-## 使用教程
+[快速开始](#-快速开始) • [功能截图](#-功能截图) • [使用说明](#-使用说明) • [从源码构建](#-从源码构建) • [贡献指南](#-贡献指南)
 
-1. 扫码登录B站账号；
-2. 填写标题并选择分区（首次使用需要点击`同步`）；
-3. 点击 `开始直播` 来开始直播；
-4. 在 *推流码* 复制链接和推流码至第三方推流工具；
-5. 在 *弹幕* 界面，可以查看并发送弹幕；
-6. 点击 `停止直播` 或关闭软件来停止直播，**使用 OBS 的 `停止直播` 并不会停止直播**；
+</div>
 
-## Ubuntu 26 (Wayland) 适配说明
+## ✨ 功能
 
-本分支针对 **Ubuntu 26 (GNOME + Wayland)** 进行了以下适配优化：
+- **获取推流码** — 自动获取 RTMP / SRT 推流地址和推流码，配合 OBS 等软件直播，无需 B 站直播姬
+- **弹幕监控** — 实时查看弹幕、进场消息、礼物消息，支持发送弹幕
+- **直播管理** — 开播时自定义标题和分区，支持多账户切换
+- **跨平台** — 支持 Windows、macOS (Intel + Apple Silicon)、Linux (amd64 + arm64)
+- **深色模式** — 自动跟随系统主题
 
-### 1. Wayland 原生支持
-- 移除硬编码的 `GDK_BACKEND=x11`、`QT_QPA_PLATFORM=xcb` 等 X11 强制环境变量
-- 移除 `QTWEBENGINE_CHROMIUM_FLAGS` 中的 `--ozone-platform=x11`
-- 移除 `--disable-gpu`，启用 GPU 加速渲染
+## 📸 功能截图
 
-### 2. HiDPI 高分屏缩放
-- 启用 `QT_AUTO_SCREEN_SCALE_FACTOR` 和 `QT_ENABLE_HIGHDPI_SCALING`
-- 自动检测 GNOME 系统缩放因子（scaling-factor / text-scaling-factor）
-- 窗口初始尺寸根据缩放比例自动适配
+| 账号面板 | 直播设置 | 推流码 | 弹幕监控 |
+|:---:|:---:|:---:|:---:|
+| ![账号面板](docs/screenshots/account-panel.png) | ![直播设置](docs/screenshots/stream-settings.png) | ![推流码](docs/screenshots/rtmp-panel.png) | ![弹幕监控](docs/screenshots/danmu-panel.png) |
+| 查看用户信息、经验 | 设置直播标题与分区 | 获取 RTMP/SRT 推流码 | 实时弹幕与发送 |
 
-### 3. 暗黑模式（自动跟随系统）
-- 完整的 CSS 变量体系，`prefers-color-scheme` 媒体查询
-- 12 个 Vue 组件的硬编码颜色全部替换为 CSS 变量
-- **Python 端检测**：通过 `gsettings` 读取 GNOME 暗色模式设置
-- **JS 兜底**：`matchMedia('prefers-color-scheme')` 检测 + `html[data-theme]` 属性
-- 跨平台兼容：Windows (注册表)、macOS (defaults 命令) 同样支持
+## 🚀 快速开始
 
-### 4. GNOME Dock 图标
-- 设置 `QT_WAYLAND_APP_ID` 和 `RESOURCE_NAME` 环境变量
-- Qt 启动后调用 `setDesktopFileName()` 和 `setApplicationName()`
-- Dock 右键图标正常显示，右键"退出"可直接关闭程序
+### 下载预构建版本
 
-### 5. 托盘图标说明
-- GNOME Wayland 下系统托盘（`QSystemTrayIcon`）可能不可用
-- 可在"控制台"面板关闭"关闭时最小化到托盘"选项
-- Linux 下关闭窗口始终直接退出，不再最小化
+从 [GitHub Releases](https://github.com/wsyb/bilibili_live_stream_code/releases) 下载对应平台的安装包：
 
-## 自行构建
+| 平台 | 架构 | 格式 |
+|------|------|------|
+| Windows | amd64 | `Setup.exe` |
+| macOS (Intel) | amd64 | `.dmg` |
+| macOS (Apple Silicon) | arm64 | `.dmg` |
+| Linux | amd64 | `.AppImage` / `.deb` |
+| Linux | arm64 | `.AppImage` / `.deb` |
+
+### 从源码运行
+
+```bash
+# 克隆仓库
+git clone https://github.com/wsyb/bilibili_live_stream_code.git
+cd bilibili_live_stream_code
+
+# 构建前端
+cd frontend
+npm install
+npm run build
+cd ..
+
+# 安装后端依赖
+pip install -r requirements.txt
+
+# 运行
+python main.py
+```
+
+> 详细构建步骤见 [从源码构建](#-从源码构建)。
+
+## 📖 使用说明
+
+1. **扫码登录** — 启动后扫码登录 B 站账号
+2. **设置直播** — 填写标题、选择分区（首次使用先点击**同步**）
+3. **开始直播** — 点击「开始直播」按钮
+4. **获取推流码** — 在「推流码」面板复制推流地址和推流码到 OBS 等工具
+5. **弹幕互动** — 在「弹幕」面板查看实时弹幕并发送消息
+6. **结束直播** — 点击「停止直播」或关闭软件
+
+> ⚠️ **注意**：在 OBS 中停止推流**不会**停止 B 站直播，需要在工具中点击「停止直播」。
+
+## 🛠️ 从源码构建
 
 ### 环境要求
 
-- **Python**: 3.9+
-- **Node.js**: 18+
+| 工具 | 最低版本 |
+|------|---------|
+| Python | 3.12+ |
+| Node.js | 18+ |
 
-### 构建步骤
+### 完整构建步骤
 
-1. **克隆仓库**
+#### 1. 克隆仓库
 
-   ```bash
-   git clone https://github.com/wsyb/bilibili_live_stream_code.git
-   cd bilibili_live_stream_code
-   ```
+```bash
+git clone https://github.com/wsyb/bilibili_live_stream_code.git
+cd bilibili_live_stream_code
+```
 
-2. **构建前端**
+#### 2. 构建前端
 
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   cd ..
-   ```
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
 
-3. **安装后端依赖**
+#### 3. 安装后端依赖
 
-   ```bash
-   pip install -r requirements.txt
-   pip install pyinstaller Pillow
-   ```
+```bash
+pip install -r requirements.txt
+pip install pyinstaller Pillow
+```
 
-   **Linux**：无需额外系统依赖，程序使用内置的 Qt 库运行托盘。建议在 Ubuntu 20.04+ 或其他主流发行版上运行。
-   
-   > 若启动时提示 `Qt platform plugin "xcb" could not be found`，请安装：  
-   > `sudo apt install libxcb-xinerama0 libxcb-cursor0 libnss3`
+**Linux 依赖**：从源码运行推荐安装 PyGObject（可选，用于托盘图标）：
 
-   从源码运行时还需 pip 安装：
-   ```bash
-   pip install PyGObject
-   ```
+```bash
+pip install PyGObject
+```
 
-   > 未安装时程序仍可正常运行，仅无托盘图标。打包后的二进制仅需系统包（无需 pip 安装）。
+> 如果启动时提示 `Qt platform plugin "xcb" could not be found`，请安装：
+> ```bash
+> sudo apt install libxcb-xinerama0 libxcb-cursor0 libnss3
+> ```
 
-4. **准备图标 (可选)**
+#### 4. 打包为可执行文件
 
-   - **macOS (ico -> icns)**:
-     ```bash
-     # 使用 sips 和 iconutil (macOS 自带)
-     sips -s format png bilibili.ico --out temp_icon.png
-     mkdir bilibili.iconset
-     sips -z 1024 1024 temp_icon.png --out bilibili.iconset/icon_512x512@2x.png
-     iconutil -c icns bilibili.iconset
-     rm -rf bilibili.iconset temp_icon.png
-     ```
+**Windows**：
+```bash
+pyinstaller main.py --name BiliLiveTool --onefile --add-data "frontend/dist;frontend/dist" --icon "bilibili.ico" --noconsole
+```
 
-   - **Linux (ico -> png)**:
-     ```bash
-     # 使用 Python Pillow 库
-     python -c "from PIL import Image; Image.open('bilibili.ico').save('bilibili.png')"
-     ```
+**macOS**：
+```bash
+pyinstaller main.py --name BiliLiveTool --onefile --add-data "frontend/dist:frontend/dist" --icon "bilibili.icns" --hidden-import _cffi_backend --windowed
+```
 
-5. **打包应用**
+**Linux**：
+```bash
+pyinstaller main.py --name BiliLiveTool --onefile \
+  --add-data "frontend/dist:frontend/dist" \
+  --add-data "bilibili.ico:." \
+  --icon "bilibili.png" \
+  --hidden-import _cffi_backend \
+  --hidden-import cffi \
+  --hidden-import qtpy \
+  --hidden-import PyQt5 \
+  --hidden-import webview.platforms.qt
+```
 
-   - **Windows**:
-     ```bash
-     pyinstaller main.py --name BiliLiveTool --onefile --add-data "frontend/dist;frontend/dist" --icon "bilibili.ico" --noconsole
-     ```
+构建产物位于 `dist/` 目录。
 
-   - **macOS**:
-     ```bash
-     pyinstaller main.py --name BiliLiveTool --onefile --add-data "frontend/dist:frontend/dist" --icon "bilibili.icns" --hidden-import _cffi_backend --windowed
-     ```
+## 🏗️ 技术栈
 
-   - **Linux**:
-     ```bash
-     pyinstaller main.py --name BiliLiveTool --onefile \
-      --add-data "frontend/dist:frontend/dist" \
-      --add-data "bilibili.ico:." \
-      --icon "bilibili.png" \
-      --hidden-import _cffi_backend \
-      --hidden-import cffi \
-      --hidden-import qtpy \
-      --hidden-import PyQt5 \
-      --hidden-import webview.platforms.qt
-     ```
+| 层级 | 技术 |
+|------|------|
+| **前端 GUI** | Vue 3 + Vite |
+| **桌面壳** | PyWebView (Qt5 / QtWebEngine) |
+| **后端** | Python 3.12+ (aiohttp, requests) |
+| **弹幕协议** | Protobuf (B 站直播) |
+| **打包** | PyInstaller |
 
-6. **运行**
+## 📁 项目结构
 
-   构建完成后，可执行文件位于 `dist` 目录下。
+```
+├── main.py                 # 应用入口
+├── backend/                # Python 后端
+│   ├── api_service.py      # API 服务
+│   ├── bilibili_api.py     # B 站 API 封装
+│   ├── config.py           # 配置管理
+│   ├── data.py             # 数据模型
+│   ├── services/           # 业务服务
+│   │   ├── auth_service.py
+│   │   ├── danmu_service.py    # 弹幕服务
+│   │   ├── live_service.py     # 直播服务
+│   │   ├── user_service.py     # 用户服务
+│   │   └── window_service.py   # 窗口通信
+│   ├── dm.proto            # 弹幕 Protobuf 定义
+│   ├── state.py            # 会话状态
+│   └── util.py             # 工具函数
+├── frontend/               # Vue 3 前端
+│   ├── src/
+│   │   ├── components/     # UI 组件
+│   │   ├── api/bridge.js   # 前后端桥接
+│   │   └── styles/         # 主题样式
+│   └── vite.config.js
+├── packaging/              # 平台打包配置
+│   ├── linux/
+│   └── windows/
+├── docs/                   # 文档
+├── requirements.txt        # Python 依赖
+└── pyproject.toml          # 项目元数据
+```
 
-## 其他
+## 🤝 贡献
 
-1. 支持推流码类型：RTMP和SRT；
-2. 因为本人穷，用不起mac，mac用户可以自行进行测试，如果调试到可以正常运行，欢迎提交pr；
-3. 社区已有基于本项目的 Tauri 重构版本，技术栈从 Python + PyInstaller 迁移至 **Tauri 2.x (Rust) + React 18 + TypeScript**，并补全了 macOS 端的适配（含托盘、窗口退出、深色模式等）。有需要的同学可以移步 [Zeppelinpp/bilibili-streamer](https://github.com/Zeppelinpp/bilibili-streamer) 查看。
+欢迎提交 Issue 和 Pull Request！
 
-### ⭐ Star 历史
+请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解开发流程和代码规范。
 
-   [![Stargazers over time](https://starchart.cc/ChaceQC/bilibili_live_stream_code.svg?variant=adaptive)](https://starchart.cc/ChaceQC/bilibili_live_stream_code)
+## 📄 许可证
+
+本项目基于 [Apache License 2.0](LICENSE.txt) 开源。
+
+```
+Copyright 2026 wsyb
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+...
+```
+
+## ⭐ Star 历史
+
+[![Stargazers over time](https://starchart.cc/wsyb/bilibili_live_stream_code.svg?variant=adaptive)](https://starchart.cc/wsyb/bilibili_live_stream_code)
+
+---
+
+> **相关项目**：[Zeppelinpp/bilibili-streamer](https://github.com/Zeppelinpp/bilibili-streamer) — 基于 Tauri 2.x (Rust) + React 18 的重构版本，补全了 macOS 适配
+
+> **维护者文档**：CI/CD 配置和构建问题详见 [HANDOVER.md](HANDOVER.md)
